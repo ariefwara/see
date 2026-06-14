@@ -34,16 +34,29 @@ var supportedExts = map[string]bool{
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: see <image-file>")
+		fmt.Println("Usage: see <image-file | directory>")
+		fmt.Println("       see .     # open first image in current directory")
 		os.Exit(1)
 	}
 
-	filePath := os.Args[1]
+	arg := os.Args[1]
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Printf("Error: file '%s' not found\n", filePath)
+	if info, err := os.Stat(arg); os.IsNotExist(err) {
+		fmt.Printf("Error: '%s' not found\n", arg)
 		os.Exit(1)
+	} else if info.IsDir() {
+		files := listImages(arg)
+		path, idx := firstValidImage(files)
+		if path == "" {
+			fmt.Printf("Error: no valid images found in '%s'\n", arg)
+			os.Exit(1)
+		}
+		openViewer(files, idx)
+		return
 	}
+
+	// Argument is a file — validate and open
+	filePath := arg
 
 	ext := strings.ToLower(filepath.Ext(filePath))
 	if !supportedExts[ext] {
@@ -79,10 +92,16 @@ func main() {
 		currentIdx = len(files) - 1
 	}
 
-	a := app.New()
-	w := a.NewWindow(filepath.Base(filePath))
+	openViewer(files, currentIdx)
+}
 
-	img := canvas.NewImageFromFile(filePath)
+func openViewer(files []string, startIdx int) {
+	path := files[startIdx]
+
+	a := app.New()
+	w := a.NewWindow(filepath.Base(path))
+
+	img := canvas.NewImageFromFile(path)
 	img.FillMode = canvas.ImageFillOriginal
 
 	scroll := container.NewScroll(img)
@@ -92,7 +111,7 @@ func main() {
 		img:        img,
 		scroll:     scroll,
 		files:      files,
-		currentIdx: currentIdx,
+		currentIdx: startIdx,
 	}
 
 	w.Canvas().SetOnTypedKey(func(ev *fyne.KeyEvent) {
@@ -164,4 +183,19 @@ func listImages(dir string) []string {
 	})
 
 	return files
+}
+
+func firstValidImage(files []string) (string, int) {
+	for i, path := range files {
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		_, _, err = image.Decode(f)
+		f.Close()
+		if err == nil {
+			return path, i
+		}
+	}
+	return "", -1
 }
