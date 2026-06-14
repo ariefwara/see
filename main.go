@@ -8,6 +8,7 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -16,11 +17,19 @@ import (
 	"fyne.io/fyne/v2/container"
 )
 
-var supportedExts = map[string]string{
-	".png":  "PNG",
-	".jpg":  "JPEG",
-	".jpeg": "JPEG",
-	".gif":  "GIF",
+type viewer struct {
+	w          fyne.Window
+	img        *canvas.Image
+	scroll     *container.Scroll
+	files      []string
+	currentIdx int
+}
+
+var supportedExts = map[string]bool{
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".gif":  true,
 }
 
 func main() {
@@ -37,7 +46,7 @@ func main() {
 	}
 
 	ext := strings.ToLower(filepath.Ext(filePath))
-	if _, ok := supportedExts[ext]; !ok {
+	if !supportedExts[ext] {
 		fmt.Printf("Error: unsupported format '%s' (supported: png, jpg, jpeg, gif)\n", ext)
 		os.Exit(1)
 	}
@@ -47,13 +56,28 @@ func main() {
 		fmt.Printf("Error: cannot open file '%s'\n", filePath)
 		os.Exit(1)
 	}
-	defer f.Close()
-
 	if _, _, err := image.Decode(f); err != nil {
+		f.Close()
 		fmt.Printf("Error: '%s' is not a valid image file\n", filePath)
 		os.Exit(1)
 	}
 	f.Close()
+
+	// List all supported images in the same directory
+	dir := filepath.Dir(filePath)
+	files := listImages(dir)
+
+	currentIdx := -1
+	for i, p := range files {
+		if p == filePath {
+			currentIdx = i
+			break
+		}
+	}
+	if currentIdx == -1 {
+		files = append(files, filePath)
+		currentIdx = len(files) - 1
+	}
 
 	a := app.New()
 	w := a.NewWindow(filepath.Base(filePath))
@@ -61,8 +85,83 @@ func main() {
 	img := canvas.NewImageFromFile(filePath)
 	img.FillMode = canvas.ImageFillOriginal
 
-	w.SetContent(container.NewScroll(img))
+	scroll := container.NewScroll(img)
+
+	v := &viewer{
+		w:          w,
+		img:        img,
+		scroll:     scroll,
+		files:      files,
+		currentIdx: currentIdx,
+	}
+
+	w.Canvas().SetOnTypedKey(func(ev *fyne.KeyEvent) {
+		switch ev.Name {
+		case fyne.KeyLeft:
+			v.prev()
+		case fyne.KeyRight:
+			v.next()
+		case fyne.KeyEscape:
+			w.Close()
+		}
+	})
+
+	w.SetContent(scroll)
 	w.Resize(fyne.NewSize(900, 700))
 	w.CenterOnScreen()
 	w.ShowAndRun()
+}
+
+func (v *viewer) loadImage(idx int) {
+	if idx < 0 || idx >= len(v.files) {
+		return
+	}
+
+	path := v.files[idx]
+	v.img.File = path
+	v.img.Image = nil
+	canvas.Refresh(v.img)
+
+	v.currentIdx = idx
+	v.w.SetTitle(filepath.Base(path))
+
+	v.scroll.Offset.X = 0
+	v.scroll.Offset.Y = 0
+	canvas.Refresh(v.scroll)
+}
+
+func (v *viewer) next() {
+	if v.currentIdx < len(v.files)-1 {
+		v.loadImage(v.currentIdx + 1)
+	}
+}
+
+func (v *viewer) prev() {
+	if v.currentIdx > 0 {
+		v.loadImage(v.currentIdx - 1)
+	}
+}
+
+func listImages(dir string) []string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	var files []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if supportedExts[ext] {
+			files = append(files, filepath.Join(dir, entry.Name()))
+		}
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return strings.ToLower(filepath.Base(files[i])) < strings.ToLower(filepath.Base(files[j]))
+	})
+
+	return files
 }
