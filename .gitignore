@@ -1,0 +1,16 @@
+# Environment
+.env
+
+# Build output
+/see
+/see.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
