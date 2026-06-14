@@ -59,8 +59,18 @@ Or install directly to `$GOPATH/bin`:
 go install .
 ```
 
+## Controls
+
+| Key | Action |
+|-----|--------|
+| `←` / `→` | Navigate to previous / next image in the same directory |
+| `Esc` | Close window |
+
+Images in the directory are sorted alphabetically.
+
 ## Features
 
+- **Keyboard navigation** — browse through images without leaving the app
 - **Drag-to-scroll** — pan around large images that exceed the window size
 - **Input validation** — checks file existence, extension, and image integrity before opening
 - **Zero web dependencies** — no HTML, CSS, or JavaScript required
