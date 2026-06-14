@@ -5,6 +5,11 @@
 /see
 /see.exe
 
+# Build artifacts from CI cross-compile
+see-linux-*
+see-darwin-*
+see-windows-*
+
 # IDE
 .idea/
 .vscode/

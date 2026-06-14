@@ -26,15 +26,30 @@ see /absolute/path/to/image.gif
 
 ## Installation
 
-### Prerequisites
+### Quick install (macOS / Linux)
 
-- Go 1.24+
-- [Fyne system dependencies](https://docs.fyne.io/started/) (Xcode / Command Line Tools on macOS, gcc / MinGW on Windows, GTK development packages on Linux)
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/ariefwara/see/main/install.sh)"
+```
+
+### Quick install (Windows PowerShell)
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/ariefwara/see/main/install.ps1 | iex"
+```
+
+The install script will:
+1. Detect your OS and architecture
+2. Download a pre-built binary from the latest release (if available)
+3. Install it to `/usr/local/bin/see` (macOS/Linux) or `$USERPROFILE\go\bin\see.exe` (Windows)
+4. Fall back to building from source if no release exists
+
+> Set `SEE_BIN` environment variable to customize the install path.
 
 ### From source
 
 ```bash
-git clone <this-repo> && cd see
+git clone https://github.com/ariefwara/see.git && cd see
 go build -o see .
 ```
 
@@ -43,8 +58,6 @@ Or install directly to `$GOPATH/bin`:
 ```bash
 go install .
 ```
-
-> On macOS, if `go install` puts the binary in `$HOME/go/bin`, make sure that directory is in your `PATH`.
 
 ## Features
 
